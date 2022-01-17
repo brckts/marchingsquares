@@ -22,6 +22,7 @@ float speed_mult = 1.0F;
 float circle_speed = 50.0F;
 int paused = 0;
 int debug = 0;
+int pixel = 0;
 int square_size = 10;
 int selected_circle = -1;
 
@@ -70,20 +71,26 @@ update_circles(void)
 {
 	for (int i = 0; i < circle_cnt; ++i) {
 		circles[i]->pos = Vector2Add(circles[i]->pos, Vector2Scale(circles[i]->v, GetFrameTime()*circle_speed*speed_mult));
-		if (circles[i]->pos.x + circles[i]->radius > WIDTH || circles[i]->pos.x - circles[i]->radius < 0)
-			circles[i]->v.x = -circles[i]->v.x;
 
-		if (circles[i]->pos.y + circles[i]->radius > HEIGHT || circles[i]->pos.y - circles[i]->radius < 0)
-			circles[i]->v.y = -circles[i]->v.y;
+		if (circles[i]->pos.x - circles[i]->radius < 0 || circles[i]->pos.x + circles[i]->radius > WIDTH)
+			circles[i]->v = Vector2Reflect(circles[i]->v, (Vector2) {1, 0});
+		if (circles[i]->pos.y - circles[i]->radius < 0 || circles[i]->pos.y + circles[i]->radius > HEIGHT)
+			circles[i]->v = Vector2Reflect(circles[i]->v, (Vector2) {0, 1});
 
-		if (circles[i]->pos.x + circles[i]->radius > WIDTH + 20)
-			circles[i]->pos.x = WIDTH - circles[i]->radius;
-		if (circles[i]->pos.x - circles[i]->radius < -20)
-			circles[i]->pos.x = circles[i]->radius;
-		if (circles[i]->pos.y + circles[i]->radius > HEIGHT + 20)
-			circles[i]->pos.y = HEIGHT - circles[i]->radius;
-		if (circles[i]->pos.y - circles[i]->radius < -20)
-			circles[i]->pos.y = circles[i]->radius;
+		// for (int j = 0; j < circle_cnt; ++j) {
+		// 	if (i == j)
+		// 		continue;
+
+		// 	if (CheckCollisionCircles(circles[i]->pos, circles[i]->radius, circles[j]->pos, circles[j]->radius)) {
+		// 		// circles[i]->v = Vector2Reflect(circles[i]->v, Vector2Normalize(Vector2Subtract(circles[i]->pos, circles[j]->pos)));
+		// 		circles[i]->v = Vector2Subtract(circles[i]->v,
+		// 			Vector2Scale(Vector2Subtract(circles[i]->pos, circles[j]->pos),
+		// 			Vector2DotProduct(Vector2Subtract(circles[i]->v, circles[j]->v),
+		// 			Vector2Subtract(circles[i]->pos, circles[j]->pos)) /
+		// 			pow(Vector2Distance(circles[i]->pos, circles[j]->pos), 2))
+		// 		);
+		// 	}
+		// }
 	}
 }
 
@@ -115,15 +122,6 @@ march_squares()
 				case 0b1011:
 					DrawLineEx((Vector2){x + get_lerp(a, b, square_size), y}, (Vector2){x + square_size, y + get_lerp(b, c, square_size)}, thickness, RED);
 					break;
-				case 0b0101:
-					if (sample_pos(x + square_size/2, y + square_size/2) > 1) {
-						DrawLineEx((Vector2){x + get_lerp(a, b, square_size), y}, (Vector2){x, y + get_lerp(a, d, square_size)}, thickness, RED);
-						DrawLineEx((Vector2){x + get_lerp(c, d, square_size), y + square_size}, (Vector2){x + square_size, y + get_lerp(b, c, square_size)}, thickness, RED);
-					} else {
-						DrawLineEx((Vector2){x, y + get_lerp(a, d, square_size)}, (Vector2){x + get_lerp(c, d, square_size), y + square_size}, thickness, RED);
-						DrawLineEx((Vector2){x + get_lerp(a, b, square_size), y}, (Vector2){x + square_size, y + get_lerp(b, c, square_size)}, thickness, RED);
-					}
-					break;
 				case 0b0110:
 				case 0b1001:
 					DrawLineEx((Vector2){x + get_lerp(a, b, square_size), y}, (Vector2){x + get_lerp(d, c, square_size), y + square_size}, thickness, RED);
@@ -139,6 +137,15 @@ march_squares()
 					} else {
 						DrawLineEx((Vector2){x + get_lerp(a, b, square_size), y}, (Vector2){x, y + get_lerp(a, d, square_size)}, thickness, RED);
 						DrawLineEx((Vector2){x + get_lerp(c, d, square_size), y + square_size}, (Vector2){x + square_size, y + get_lerp(b, c, square_size)}, thickness, RED);
+					}
+					break;
+				case 0b0101:
+					if (sample_pos(x + square_size/2, y + square_size/2) > 1) {
+						DrawLineEx((Vector2){x + get_lerp(a, b, square_size), y}, (Vector2){x, y + get_lerp(a, d, square_size)}, thickness, RED);
+						DrawLineEx((Vector2){x + get_lerp(c, d, square_size), y + square_size}, (Vector2){x + square_size, y + get_lerp(b, c, square_size)}, thickness, RED);
+					} else {
+						DrawLineEx((Vector2){x, y + get_lerp(a, d, square_size)}, (Vector2){x + get_lerp(c, d, square_size), y + square_size}, thickness, RED);
+						DrawLineEx((Vector2){x + get_lerp(a, b, square_size), y}, (Vector2){x + square_size, y + get_lerp(b, c, square_size)}, thickness, RED);
 					}
 					break;
 			}
@@ -177,6 +184,9 @@ handle_keys(void)
 			if (square_size > 5)
 				square_size -= 5;
 			break;
+		case KEY_I:
+			pixel = !pixel;
+			break;
 	}
 }
 
@@ -197,12 +207,36 @@ draw_pixels(void)
 }
 
 void
-draw_overlay()
+draw_squares(void)
+{
+	int i;
+	for (i = square_size; i < WIDTH; i += square_size)
+		DrawLine(i, 0, i, HEIGHT, BLACK);
+	for (i = square_size; i < HEIGHT; i += square_size)
+		DrawLine(0, i, WIDTH, i, BLACK);
+}
+
+void
+draw_overlay(void)
 {
 	DrawFPS(10, 10);
 	DrawText(TextFormat("circle_cnt: %d", circle_cnt), 10, 30, 20, DARKGRAY);
 	DrawText(TextFormat("speed mult: %.2f", speed_mult), 10, 50, 20, DARKGRAY);
 	DrawText(TextFormat("square size: %d", square_size), 10, 70, 20, DARKGRAY);
+
+	if (debug) {
+		for (int i = 0; i < circle_cnt; ++i) {
+			if (CheckCollisionPointCircle(GetMousePosition(), circles[i]->pos, circles[i]->radius)) {
+				DrawCircleLines(circles[i]->pos.x, circles[i]->pos.y, circles[i]->radius, GREEN);
+				DrawText(TextFormat("id: %d\npos: (%f,%f)\nv: %f", i, circles[i]->pos.x, circles[i]->pos.y, Vector2Length(circles[i]->v)),
+					circles[i]->pos.x + circles[i]->radius + 5,
+					circles[i]->pos.y - circles[i]->radius - 5,
+					10,
+					DARKGRAY
+				);
+			}
+		}
+	}
 }
 
 void
@@ -210,9 +244,15 @@ render(void)
 {
 	BeginDrawing();
 		ClearBackground(RAYWHITE);
-		if (debug)
+		if (debug) {
 			render_circles();
-		march_squares();
+			// draw_squares();
+		}
+
+		if (pixel)
+			draw_pixels();
+		else
+			march_squares();
 		draw_overlay();
 	EndDrawing();
 }
