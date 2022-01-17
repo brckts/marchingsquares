@@ -1,6 +1,4 @@
-#ifndef RAYLIB_H
 #include <raylib.h>
-#endif
 #include <stdlib.h>
 #include <raymath.h>
 #include <math.h>
